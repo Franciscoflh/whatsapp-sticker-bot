@@ -29,13 +29,13 @@ async function createGifSticker(client, msg) {
         const inputStream = Readable.from(Buffer.from(media.data, 'base64'));
 
         const ffmpeg = spawn('ffmpeg', [
-            '-i', 'pipe:0', 
-            '-vf', 'scale=512:512:flags=lanczos', 
-            '-loop', '0', 
+            '-i', 'pipe:0',
+            '-vf', 'scale=512:512:flags=lanczos',
+            '-loop', '0',
             '-preset', 'default',
-            '-an', '-vsync', '0', 
-            '-f', 'webp', 
-            'pipe:1' 
+            '-an', '-vsync', '0',
+            '-f', 'webp',
+            'pipe:1'
         ]);
 
         let outputBuffer = Buffer.alloc(0);
@@ -54,13 +54,21 @@ async function createGifSticker(client, msg) {
                 return msg.reply('Ocorreu um erro ao criar sua figurinha animada.');
             }
 
+            if (!outputBuffer.length) {
+                console.error('Erro: Buffer de saída está vazio.');
+                return msg.reply('Erro ao criar figurinha. Tente outro GIF/Vídeo.');
+            }
+
             console.log('Conversão concluída.');
 
-            const stickerMedia = new MessageMedia('image/webp', outputBuffer.toString('base64'), 'sticker.webp');
-
-            await client.sendMessage(msg.from, stickerMedia, { sendMediaAsSticker: true });
-
-            msg.reply('Figurinha animada enviada com sucesso!');
+            try {
+                const stickerMedia = new MessageMedia('image/webp', outputBuffer.toString('base64'), 'sticker.webp');
+                await client.sendMessage(msg.from, stickerMedia, { sendMediaAsSticker: true });
+                msg.reply('Figurinha animada enviada com sucesso!');
+            } catch (sendError) {
+                console.error('Erro ao enviar figurinha:', sendError);
+                msg.reply('Erro ao enviar a figurinha. Tente novamente.');
+            }
         });
 
         inputStream.pipe(ffmpeg.stdin);
