@@ -3,8 +3,6 @@ const { spawn } = require('child_process');
 const { Readable } = require('stream');
 
 async function createGifSticker(client, msg) {
-    msg.reply('Processando figurinha animada...');
-
     try {
         console.log('Baixando mídia...');
         const media = await msg.downloadMedia();
@@ -64,7 +62,7 @@ async function createGifSticker(client, msg) {
             try {
                 const stickerMedia = new MessageMedia('image/webp', outputBuffer.toString('base64'), 'sticker.webp');
                 await client.sendMessage(msg.from, stickerMedia, { sendMediaAsSticker: true });
-                msg.reply('Figurinha animada enviada com sucesso!');
+                msg.reply('Figurinha enviada com sucesso!');
             } catch (sendError) {
                 console.error('Erro ao enviar figurinha:', sendError);
                 msg.reply('Erro ao enviar a figurinha. Tente novamente.');

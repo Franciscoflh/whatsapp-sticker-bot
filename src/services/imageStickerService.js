@@ -2,8 +2,6 @@ const { MessageMedia } = require('whatsapp-web.js');
 const sharp = require('sharp');
 
 async function processSticker(client, msg) {
-    msg.reply('Processando sua figurinha... Aguarde.');
-
     try {
         const media = await msg.downloadMedia();
 
