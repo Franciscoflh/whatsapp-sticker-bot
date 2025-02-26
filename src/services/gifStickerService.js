@@ -27,14 +27,32 @@ async function createGifSticker(client, msg) {
         const inputStream = Readable.from(Buffer.from(media.data, 'base64'));
 
         const ffmpeg = spawn('ffmpeg', [
+            '-loglevel', 'debug',
+            '-t', '6',
             '-i', 'pipe:0',
-            '-vf', 'scale=512:512:flags=lanczos',
-            '-loop', '0',
+            '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2',
             '-preset', 'default',
-            '-an', '-vsync', '0',
+            '-q:v', '50',  
+            '-fs', '500K', 
+            '-loop', '0',
+            '-an',
+            '-metadata', 'sticker-pack-name=FigBot Sticker Pack',
+            '-metadata', 'sticker-pack-publisher=FigBot',
+            '-metadata', 'sticker-pack-title=Figurinha do FigBot',
             '-f', 'webp',
             'pipe:1'
         ]);
+
+        /*v1const ffmpeg = spawn('ffmpeg', [
+            '-i', 'pipe:0', 
+            '-t', '6', 
+            '-vf', 'scale=512:512:force_original_aspect_ratio=decrease', 
+            '-loop', '0', 
+            '-preset', 'default',
+            '-an', 
+            '-f', 'webp', 
+            'pipe:1' 
+        ]);*/
 
         let outputBuffer = Buffer.alloc(0);
 
@@ -57,7 +75,7 @@ async function createGifSticker(client, msg) {
                 return msg.reply('Erro ao criar figurinha. Tente outro GIF/Vídeo.');
             }
 
-            console.log('Conversão concluída.');
+            console.log('Conversão concluída. Tamanho do buffer:', outputBuffer.length);
 
             try {
                 const stickerMedia = new MessageMedia('image/webp', outputBuffer.toString('base64'), 'sticker.webp');

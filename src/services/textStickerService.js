@@ -2,8 +2,6 @@ const { MessageMedia } = require('whatsapp-web.js');
 const sharp = require('sharp');
 
 async function createTextSticker(client, msg, text) {
-    msg.reply('Criando figurinha com texto... Aguarde.');
-
     try {
         const textBuffer = await generateTextSticker(text);
         const stickerBase64 = textBuffer.toString('base64');

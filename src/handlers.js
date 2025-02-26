@@ -1,6 +1,9 @@
+const PQueue = require('p-queue').default;
 const { processSticker } = require('./services/imageStickerService');
 const { createTextSticker } = require('./services/textStickerService');
 const { createGifSticker } = require('./services/gifStickerService');
+
+const queue = new PQueue({ concurrency: 1 });
 
 async function handleMessage(client, msg) {
     const isGroup = msg.from.endsWith('@g.us');
@@ -16,19 +19,24 @@ async function handleMessage(client, msg) {
             return msg.reply('Erro ao processar a mídia. Tente novamente.');
         }
 
-        console.log(`Processando mídia do tipo: ${media.mimetype}`);
+        console.log(`Processando Mídia - Tipo: ${media.mimetype}`);
 
-        if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
-            return await createGifSticker(client, msg);
-        }
-
-        return await processSticker(client, msg);
+        return queue.add(async () => { 
+            if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
+                await createGifSticker(client, msg);
+            } else {
+                await processSticker(client, msg);
+            }
+        });
     }
 
     if (msg.body.startsWith('!texto ')) {
         const text = msg.body.replace('!texto ', '').trim();
         if (!text) return msg.reply('Envie um texto válido após o comando.');
-        return await createTextSticker(client, msg, text);
+
+        return queue.add(async () => { 
+            await createTextSticker(client, msg, text);
+        });
     }
 
     if (!isGroup && msg.hasMedia) {
@@ -38,13 +46,17 @@ async function handleMessage(client, msg) {
             return msg.reply('Erro ao processar a mídia. Tente novamente.');
         }
 
-        console.log(`Processando mídia do tipo: ${media.mimetype}`);
+        console.log(`Processando Mídia - Tipo: ${media.mimetype}`);
 
-        if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
-            return await createGifSticker(client, msg);
-        }
+        return queue.add(async () => { 
+            if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
+                await createGifSticker(client, msg);
+            } else {
+                await processSticker(client, msg);
+            }
+        });
     }
-    
+
     if (isGroup && msg.body === '!gif') {
         const quotedMsg = await msg.getQuotedMessage();
 
@@ -56,11 +68,13 @@ async function handleMessage(client, msg) {
                 return msg.reply('Erro ao processar a mídia. Tente novamente.');
             }
 
-            console.log(`Processando mídia do tipo: ${media.mimetype}`);
+            console.log(`Processando Mídia - Tipo: ${media.mimetype}`);
 
-            if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
-                return await createGifSticker(client, quotedMsg);
-            }
+            return queue.add(async () => { 
+                if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
+                    await createGifSticker(client, quotedMsg);
+                }
+            });
         } else {
             return msg.reply('Responda a um GIF com o comando `!gif` para transformá-lo em figurinha.');
         }

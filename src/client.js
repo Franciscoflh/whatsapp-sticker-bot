@@ -27,12 +27,12 @@ function initializeClient() {
     client.on('message', async (msg) => {
         if (msg.body === '!ajuda') {
             msg.reply(`*Lista de Comandos*:
-                
+
         -\`!imagem\` → Envie uma imagem seguido desse comando na legenda para transformar em figurinha.
 
         -\`!gif\` → Envie um GIF e responda a mensagem com esse comando para transformar em figurinha gif.
 
-        -\`!texto <mensagem>\` → Faz uma figurinha a partir do texto fornecido, por exemplo: !texto teste`);
+        -\`!texto <mensagem>\` → Faz uma figurinha a partir do texto fornecido.`);
         }
     });
 
