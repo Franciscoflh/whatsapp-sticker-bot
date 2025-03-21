@@ -2,22 +2,33 @@ version: '3.8'
 
 services:
   bot:
-    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY:-Franciscoflh/whatsapp-sticker-bot}:latest
+    container_name: whatsapp-sticker-bot
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - STORAGE_PATH=/app/data
+      - NODE_ENV=${NODE_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_STICKER_SIZE=${MAX_STICKER_SIZE:-100}
+      - MAX_VIDEO_DURATION=${MAX_VIDEO_DURATION:-30}
+      - STICKER_QUALITY=${STICKER_QUALITY:-80}
+      - WHATSAPP_SESSION_DIR=/app/sessions
+      - WHATSAPP_DATA_DIR=/app/data
+      - CHROME_PATH=/usr/bin/google-chrome-stable
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30000}
+      - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-5000}
+      - HEALTH_CHECK_RETRIES=${HEALTH_CHECK_RETRIES:-3}
     volumes:
-      - bot-data:/app/data
+      - ./data:/app/data
       - ./sessions:/app/sessions
     tmpfs:
-      - /tmp
       - /run
       - /run/lock
     cap_add:
       - SYS_ADMIN
+    security_opt:
+      - seccomp=unconfined
     deploy:
       resources:
         limits:
@@ -26,19 +37,17 @@ services:
         reservations:
           cpus: '0.5'
           memory: 1G
-    security_opt:
-      - seccomp=unconfined
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     healthcheck:
       test: ["CMD", "node", "./dist/healthcheck.js"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   bot-data: 
