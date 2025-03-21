@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   bot:
-    image: ghcr.io/${GITHUB_REPOSITORY:-Franciscoflh/whatsapp-sticker-bot}:latest
+    image: ${DOCKER_REGISTRY_URL:-ghcr.io}/${DOCKER_USERNAME:-Franciscoflh}/whatsapp-sticker-bot:latest
     container_name: whatsapp-sticker-bot
     restart: unless-stopped
     environment:
@@ -16,15 +16,18 @@ services:
       - CHROME_PATH=/usr/bin/google-chrome-stable
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+      - PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-accelerated-2d-canvas,--no-first-run,--no-zygote,--disable-gpu,--crash-dumps-dir=/tmp/chrome-crashes
       - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30000}
       - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-5000}
       - HEALTH_CHECK_RETRIES=${HEALTH_CHECK_RETRIES:-3}
     volumes:
       - ./data:/app/data
       - ./sessions:/app/sessions
+      - /tmp/chrome-crashes:/tmp/chrome-crashes
     tmpfs:
       - /run
       - /run/lock
+      - /tmp
     cap_add:
       - SYS_ADMIN
     security_opt:

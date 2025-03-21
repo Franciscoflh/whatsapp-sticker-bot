@@ -11,9 +11,15 @@ export const puppeteerConfig = {
         '--no-zygote',
         '--disable-gpu',
         '--single-process',
-        '--disable-web-security'
+        '--disable-web-security',
+        '--crash-dumps-dir=/tmp/chrome-crashes',
+        '--disable-crash-reporter'
     ],
-    headless: 'new',
+    headless: true,
     timeout: 60000,
-    userDataDir: `${config.storage.persistentDir}/sessions`
+    userDataDir: `${config.storage.persistentDir}/sessions`,
+    ignoreDefaultArgs: ['--disable-extensions'],
+    env: {
+        CHROME_CRASHPAD_HANDLER_SKIP: 'true'
+    }
 }; 

@@ -50,7 +50,8 @@ ENV CHROME_PATH=/usr/bin/chromium \
     NODE_ENV=production \
     STORAGE_PATH=/app/data \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    CHROME_CRASHPAD_HANDLER_SKIP=true
 
 WORKDIR /app
 
@@ -60,12 +61,11 @@ RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
 
-RUN mkdir -p /app/data /app/temp /app/sessions
+RUN mkdir -p /app/data /app/temp /app/sessions /tmp/chrome-crashes && \
+    chown -R node:node /app /tmp/chrome-crashes
 
-VOLUME ["/app/data", "/app/sessions"]
+VOLUME ["/app/data", "/app/sessions", "/tmp/chrome-crashes"]
 
-RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
-    && chown -R pptruser:pptruser /app
-USER pptruser
+USER node
 
 CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js"] 
