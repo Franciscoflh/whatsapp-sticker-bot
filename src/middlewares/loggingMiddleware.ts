@@ -26,4 +26,4 @@ export class LoggingMiddleware implements MessageMiddleware {
             throw error;
         }
     }
-} 
+}

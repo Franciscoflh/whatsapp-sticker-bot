@@ -4,7 +4,13 @@ import { config } from './config/environment';
 import { MessageController } from './controllers/messageController';
 
 const client = new WAWebJS.Client({
-    authStrategy: new WAWebJS.LocalAuth(),
+    authStrategy: new WAWebJS.LocalAuth({
+        dataPath: config.storage.persistentDir
+    }),
+    webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/pedroslopez/whatsapp-web.js/main/webVersionCache.json'
+   },
     puppeteer: {
         executablePath: config.chromePath,
         args: [
@@ -14,8 +20,7 @@ const client = new WAWebJS.Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu',
-            '--single-process'
+            '--disable-gpu'
         ],
         headless: true
     }
@@ -63,4 +68,4 @@ function initializeClient() {
     client.initialize();
 }
 
-initializeClient(); 
+initializeClient();

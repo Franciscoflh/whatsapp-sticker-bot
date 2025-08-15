@@ -1,7 +1,7 @@
 import WAWebJS from 'whatsapp-web.js';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import * as ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { config } from '../config/environment';
 import { StickerOptions, StickerService } from '../models/types';
 import { MonitoringService } from './monitoringService';
@@ -178,4 +178,4 @@ export class StickerServiceImpl implements StickerService {
             }
         }, 'Erro ao criar sticker GIF');
     }
-} 
+}

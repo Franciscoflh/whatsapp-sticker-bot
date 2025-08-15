@@ -33,4 +33,4 @@ export class InMemoryStatsRepository implements StatsRepository {
         this.failureCount = 0;
         this.totalProcessingTime = 0;
     }
-} 
+}

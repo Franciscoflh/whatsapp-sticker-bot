@@ -22,4 +22,4 @@ export const puppeteerConfig = {
     env: {
         CHROME_CRASHPAD_HANDLER_SKIP: 'true'
     }
-}; 
+};

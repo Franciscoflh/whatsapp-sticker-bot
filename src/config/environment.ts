@@ -23,7 +23,7 @@ interface Config {
 const developmentConfig: Config = {
     stickerSize: 512,
     stickerQuality: 80,
-    chromePath: process.env.CHROME_PATH || '/usr/bin/chromium',
+    chromePath: process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     rateLimit: {
         windowMs: 60000,
         maxRequests: 10
@@ -41,7 +41,7 @@ const developmentConfig: Config = {
 const productionConfig: Config = {
     stickerSize: 512,
     stickerQuality: 80,
-    chromePath: process.env.CHROME_PATH || '/usr/bin/chromium',
+    chromePath: process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     rateLimit: {
         windowMs: 60000,
         maxRequests: 30
@@ -58,4 +58,4 @@ const productionConfig: Config = {
 
 export const config: Config = process.env.NODE_ENV === 'production' 
     ? productionConfig 
-    : developmentConfig; 
+    : developmentConfig;

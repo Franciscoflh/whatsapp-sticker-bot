@@ -19,4 +19,4 @@ async function check() {
     }
 }
 
-check(); 
+check();

@@ -46,4 +46,4 @@ export class HealthCheck {
         if (failureRate > 0.2) return 'degraded';
         return 'healthy';
     }
-} 
+}

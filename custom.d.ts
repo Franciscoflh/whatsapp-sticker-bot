@@ -1,0 +1,10 @@
+declare module '@babel/generator';
+declare module '@babel/traverse';
+declare module 'graceful-fs';
+declare module 'ms';
+declare module 'http-errors';
+declare module 'send';
+declare module 'serve-static';
+declare module 'body-parser';
+declare module 'express';
+declare module 'express-serve-static-core';
