@@ -77,7 +77,8 @@ export class StickerServiceImpl implements StickerService {
                     );
                 }
 
-                const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
+
                 if (!supportedTypes.includes(media.mimetype)) {
                     throw new BusinessLogicError(
                         `Tipo de arquivo não suportado: ${media.mimetype}`,
@@ -86,30 +87,35 @@ export class StickerServiceImpl implements StickerService {
                     );
                 }
 
+                if (media.mimetype === 'image/gif' || media.mimetype === 'video/mp4') {
+                    console.log('Mídia animada detectada, usando FFmpeg:', media.mimetype);
+                    return this.createGifSticker(client, message, options);
+                }
+
                 const quality = options.quality || this.config.stickerQuality;
                 const size = options.size || this.config.stickerSize;
 
-            console.log('Configurações:', { quality, size });
-            console.log('Processando imagem com sharp');
-            
-            const buffer = Buffer.from(media.data, 'base64');
-            const processedBuffer = await sharp(buffer)
-                .resize(size, size, {
-                    fit: 'contain',
-                    background: { r: 255, g: 255, b: 255, alpha: 0 }
-                })
-                .webp({ quality })
-                .toBuffer();
+                console.log('Configurações:', { quality, size });
+                console.log('Processando imagem estática com Sharp');
+                
+                const buffer = Buffer.from(media.data, 'base64');
+                const processedBuffer = await sharp(buffer)
+                    .resize(size, size, {
+                        fit: 'contain',
+                        background: { r: 255, g: 255, b: 255, alpha: 0 }
+                    })
+                    .webp({ quality })
+                    .toBuffer();
 
-            console.log('Imagem processada, enviando sticker');
-            const stickerMedia = new WAWebJS.MessageMedia('image/webp', processedBuffer.toString('base64'));
-            await client.sendMessage(message.from, stickerMedia, {
-                sendMediaAsSticker: true,
-                stickerName: 'Sticker Bot',
-                stickerAuthor: 'WhatsApp Sticker Bot'
-            });
-            console.log('Sticker enviado com sucesso');
-        }, 'Erro ao criar sticker');
+                console.log('Imagem processada, enviando sticker');
+                const stickerMedia = new WAWebJS.MessageMedia('image/webp', processedBuffer.toString('base64'));
+                await client.sendMessage(message.from, stickerMedia, {
+                    sendMediaAsSticker: true,
+                    stickerName: 'Sticker Bot',
+                    stickerAuthor: 'WhatsApp Sticker Bot'
+                });
+                console.log('Sticker enviado com sucesso');
+            }, 'Erro ao criar sticker');
     }
 
     async createTextSticker(client: WAWebJS.Client, message: WAWebJS.Message, text: string, options: StickerOptions = {}): Promise<void> {
@@ -164,13 +170,18 @@ export class StickerServiceImpl implements StickerService {
             const buffer = Buffer.from(media.data, 'base64');
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(7);
-            const tempInputPath = join(tmpdir(), `temp-${timestamp}-${random}-input.mp4`);
+            
+            // Determinar extensão correta baseada no mimetype
+            const extension = media.mimetype === 'image/gif' ? 'gif' : 'mp4';
+            const tempInputPath = join(tmpdir(), `temp-${timestamp}-${random}-input.${extension}`);
             const tempOutputPath = join(tmpdir(), `temp-${timestamp}-${random}-output.webp`);
 
             try {
                 await writeFile(tempInputPath, buffer);
 
                 await new Promise((resolve, reject) => {
+                    console.log(`Iniciando conversão FFmpeg: ${tempInputPath} -> ${tempOutputPath}`);
+                    
                     ffmpeg(tempInputPath)
                         .addOutputOptions([
                             '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,format=rgba,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000',
@@ -182,8 +193,24 @@ export class StickerServiceImpl implements StickerService {
                             '-vsync', '0',
                             '-threads', '0'
                         ])
-                        .on('end', resolve)
-                        .on('error', reject)
+                        .on('start', (commandLine) => {
+                            console.log('Comando FFmpeg:', commandLine);
+                        })
+                        .on('progress', (progress) => {
+                            if (progress.percent) {
+                                console.log(`Progresso: ${Math.round(progress.percent)}%`);
+                            }
+                        })
+                        .on('end', () => {
+                            console.log('Conversão FFmpeg concluída');
+                            resolve(undefined);
+                        })
+                        .on('error', (error, stdout, stderr) => {
+                            console.error('Erro FFmpeg:', error.message);
+                            console.error('FFmpeg stdout:', stdout);
+                            console.error('FFmpeg stderr:', stderr);
+                            reject(new Error(`FFmpeg falhou: ${error.message}`));
+                        })
                         .save(tempOutputPath);
                 });
 
@@ -199,13 +226,47 @@ export class StickerServiceImpl implements StickerService {
                 }
 
                 console.log('GIF processado, enviando sticker');
-                const stickerMedia = new WAWebJS.MessageMedia('image/webp', webpBuffer.toString('base64'));
-                await client.sendMessage(message.from, stickerMedia, {
-                    sendMediaAsSticker: true,
-                    stickerName: 'Sticker Bot',
-                    stickerAuthor: 'WhatsApp Sticker Bot'
-                });
-                console.log('Sticker enviado com sucesso');
+                
+                // Validar se o buffer WebP foi criado corretamente
+                if (!webpBuffer || webpBuffer.length === 0) {
+                    throw new Error('Buffer WebP vazio ou inválido');
+                }
+                
+                console.log(`Buffer WebP criado com ${webpBuffer.length} bytes`);
+                
+                const base64Data = webpBuffer.toString('base64');
+                if (!base64Data || base64Data.length === 0) {
+                    throw new Error('Falha ao converter buffer para base64');
+                }
+                
+                const stickerMedia = new WAWebJS.MessageMedia('image/webp', base64Data);
+                
+                // Tentar enviar com timeout e retry
+                let attempts = 0;
+                const maxAttempts = 3;
+                
+                while (attempts < maxAttempts) {
+                    try {
+                        await client.sendMessage(message.from, stickerMedia, {
+                            sendMediaAsSticker: true,
+                            stickerName: 'Sticker Bot',
+                            stickerAuthor: 'WhatsApp Sticker Bot'
+                        });
+                        console.log('Sticker enviado com sucesso');
+                        break;
+                    } catch (sendError) {
+                         attempts++;
+                         const errorMessage = sendError instanceof Error ? sendError.message : String(sendError);
+                         console.warn(`Tentativa ${attempts} falhou:`, errorMessage);
+                         
+                         if (attempts >= maxAttempts) {
+                             throw new Error(`Falha ao enviar sticker após ${maxAttempts} tentativas: ${errorMessage}`);
+                         }
+                        
+                        // Aguardar antes da próxima tentativa
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+                    }
+                }
             } catch (error) {
                 try {
                     await Promise.all([

@@ -68,7 +68,7 @@ export const whatsappMessageSchema = z.object({
     .max(4096, 'Mensagem muito longa')
     .optional(),
   type: z.enum([
-    'chat', 'image', 'video', 'audio', 'document', 'sticker', 'location', 'vcard', 'multi_vcard'
+    'chat', 'image', 'video', 'audio', 'document', 'sticker', 'location', 'vcard', 'multi_vcard', 'notification_template'
   ]),
   timestamp: z.number()
     .positive('Timestamp deve ser positivo'),

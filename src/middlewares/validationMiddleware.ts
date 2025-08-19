@@ -66,6 +66,10 @@ export class ValidationMiddleware implements MessageMiddleware {
       case 'sticker':
         break;
         
+      case 'notification_template':
+        // Mensagens de template de notificação são ignoradas silenciosamente
+        break;
+        
       default:
         if (!this.isSupportedMessageType(message.type)) {
           throw createValidationError(
@@ -239,7 +243,7 @@ export class ValidationMiddleware implements MessageMiddleware {
 
   private isSupportedMessageType(type: string): boolean {
     const supportedTypes = [
-      'chat', 'image', 'document', 'sticker', 'video'
+      'chat', 'image', 'document', 'sticker', 'video', 'notification_template'
     ];
     return supportedTypes.includes(type);
   }
