@@ -15,7 +15,10 @@
     "declaration": true,
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true, 
+    "useDefineForClassFields": false
   },
   "include": ["src/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "dist"]

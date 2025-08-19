@@ -18,7 +18,7 @@ Bot para criar stickers a partir de imagens, gifs e texto no WhatsApp.
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/whatsapp-sticker-bot.git
+git clone https://github.com/Franciscoflh/whatsapp-sticker-bot.git
 cd whatsapp-sticker-bot
 ```
 

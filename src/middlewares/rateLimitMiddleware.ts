@@ -10,9 +10,16 @@ export class RateLimitMiddleware implements MessageMiddleware {
         this.maxRequests = maxRequests;
     }
 
+    async checkRateLimit(context: MessageContext): Promise<void> {
+        const now = Date.now();
+        const userId = context.message.from;
+        
+        await this.handle(context, async () => {});
+    }
+
     async handle(context: MessageContext, next: () => Promise<void>): Promise<void> {
         const now = Date.now();
-        const userId = context.userId;
+        const userId = context.message.from;
 
         if (!this.requestMap.has(userId)) {
             this.requestMap.set(userId, []);
@@ -28,11 +35,9 @@ export class RateLimitMiddleware implements MessageMiddleware {
         if (userTimestamps.length >= this.maxRequests) {
             const oldestTimestamp = userTimestamps[0];
             const resetTime = oldestTimestamp + this.windowMs - now;
-            await context.message.reply(
-                `Você atingiu o limite de ${this.maxRequests} stickers por ${this.windowMs / 1000} segundos. ` +
-                `Tente novamente em ${Math.ceil(resetTime / 1000)} segundos.`
-            );
-            return;
+            const error = new Error(`Rate limit exceeded. Try again in ${Math.ceil(resetTime / 1000)} seconds.`);
+            error.name = 'RateLimitError';
+            throw error;
         }
 
         userTimestamps.push(now);

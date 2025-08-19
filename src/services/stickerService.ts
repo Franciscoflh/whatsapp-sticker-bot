@@ -2,52 +2,92 @@ import WAWebJS from 'whatsapp-web.js';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import { config } from '../config/environment';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../container/types';
 import { StickerOptions, StickerService } from '../models/types';
 import { MonitoringService } from './monitoringService';
+import LoggerService from './loggerService';
+import { BusinessLogicError, SystemError, ErrorCode } from '../utils/errors';
+import { ErrorMiddleware } from '../middlewares/errorMiddleware';
 import { writeFile, unlink, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
+@injectable()
 export class StickerServiceImpl implements StickerService {
     private monitoringService: MonitoringService;
+    private logger: LoggerService;
+    private config: any;
 
-    constructor(monitoringService: MonitoringService) {
+    constructor(
+        @inject(TYPES.MonitoringService) monitoringService: MonitoringService,
+        @inject(TYPES.LoggerService) logger: LoggerService,
+        @inject(TYPES.Config) config: any
+    ) {
         this.monitoringService = monitoringService;
+        this.logger = logger;
+        this.config = config;
     }
 
     private async processWithMonitoring<T>(
-        processFn: () => Promise<T>,
-        errorMessage: string
-    ): Promise<T> {
-        const startTime = Date.now();
-        this.monitoringService.startProcessing();
+    operation: string,
+    processFn: () => Promise<T>,
+    context?: any
+): Promise<T> {
+    return ErrorMiddleware.withPerformanceLogging(
+        operation, 
+        async () => {
+            this.monitoringService.startProcessing();
 
-        try {
-            console.log('Iniciando processamento monitorado');
-            const result = await processFn();
-            console.log('Processamento concluído com sucesso');
-            this.monitoringService.endProcessing(Date.now() - startTime, true);
-            return result;
-        } catch (error) {
-            console.error('Erro durante o processamento:', error);
-            this.monitoringService.endProcessing(Date.now() - startTime, false);
-            throw new Error(errorMessage);
-        }
-    }
+            try {
+                this.logger.info(`Iniciando ${operation}`, context);
+                const result = await processFn();
+                this.logger.info(`${operation} concluído com sucesso`, context);
+                this.monitoringService.endProcessing(Date.now(), true);
+                return result;
+            } catch (error) {
+                this.monitoringService.endProcessing(Date.now(), false);
+                throw error;
+            }
+        },
+        context 
+    );
+}
+
 
     async createSticker(client: WAWebJS.Client, message: WAWebJS.Message, options: StickerOptions = {}): Promise<void> {
-        return this.processWithMonitoring(async () => {
-            console.log('Iniciando criação de sticker');
-            const media = await message.downloadMedia();
-            if (!media || !media.mimetype) {
-                throw new Error('Mídia não pôde ser processada');
-            }
+        const context = {
+            messageId: message.id._serialized,
+            messageType: message.type,
+            from: message.from,
+            options
+        };
 
-            const quality = options.quality || config.stickerQuality;
-            const size = options.size || config.stickerSize;
+        return this.processWithMonitoring(
+            'createSticker',
+            async () => {
+                const media = await message.downloadMedia();
+                if (!media || !media.mimetype) {
+                    throw new BusinessLogicError(
+                        'Mídia não pôde ser processada ou está corrompida',
+                        ErrorCode.STICKER_CREATION_FAILED,
+                        { messageId: message.id._serialized }
+                    );
+                }
+
+                const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                if (!supportedTypes.includes(media.mimetype)) {
+                    throw new BusinessLogicError(
+                        `Tipo de arquivo não suportado: ${media.mimetype}`,
+                        ErrorCode.UNSUPPORTED_FILE_TYPE,
+                        { mimetype: media.mimetype }
+                    );
+                }
+
+                const quality = options.quality || this.config.stickerQuality;
+                const size = options.size || this.config.stickerSize;
 
             console.log('Configurações:', { quality, size });
             console.log('Processando imagem com sharp');
@@ -73,10 +113,12 @@ export class StickerServiceImpl implements StickerService {
     }
 
     async createTextSticker(client: WAWebJS.Client, message: WAWebJS.Message, text: string, options: StickerOptions = {}): Promise<void> {
-        return this.processWithMonitoring(async () => {
+        return this.processWithMonitoring(
+            'createTextSticker',
+            async () => {
             console.log('Iniciando criação de sticker de texto');
-            const size = options.size || config.stickerSize;
-            const quality = options.quality || config.stickerQuality;
+            const size = options.size || this.config.stickerSize;
+            const quality = options.quality || this.config.stickerQuality;
 
             console.log('Configurações:', { quality, size, text });
             
@@ -106,7 +148,7 @@ export class StickerServiceImpl implements StickerService {
     }
 
     async createGifSticker(client: WAWebJS.Client, message: WAWebJS.Message, options: StickerOptions = {}): Promise<void> {
-        return this.processWithMonitoring(async () => {
+        return this.processWithMonitoring('createGifSticker', async () => {
             console.log('Iniciando criação de sticker GIF');
             const media = await message.downloadMedia();
             if (!media || !media.mimetype) {
@@ -114,8 +156,8 @@ export class StickerServiceImpl implements StickerService {
             }
 
             console.log('Tipo de mídia recebida:', media.mimetype);
-            const size = options.size || config.stickerSize;
-            const quality = options.quality || config.stickerQuality;
+            const size = options.size || this.config.stickerSize;
+            const quality = options.quality || this.config.stickerQuality;
 
             console.log('Configurações:', { quality, size });
             
