@@ -17,7 +17,7 @@ const client = new WAWebJS.Client({
     remotePath: 'https://raw.githubusercontent.com/pedroslopez/whatsapp-web.js/main/webVersionCache.json'
    },
     puppeteer: {
-        executablePath: (diContainer.get(TYPES.Config) as { chromePath: string }).chromePath,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (diContainer.get(TYPES.Config) as { chromePath: string }).chromePath,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -25,9 +25,16 @@ const client = new WAWebJS.Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor',
+            '--disable-extensions',
+            '--disable-plugins',
+            '--disable-default-apps'
         ],
-        headless: true
+        headless: true,
+        timeout: 60000,
+        ignoreDefaultArgs: false
     }
 });
 
